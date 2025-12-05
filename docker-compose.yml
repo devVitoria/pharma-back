@@ -1,0 +1,67 @@
+version: '2'
+
+services:
+
+  postgres:
+    image: postgres:15
+    container_name: postgres-api
+    restart: always
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: microservices_farmaco
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: masterKey
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - pharma_net
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq_pharma
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    networks:
+      - pharma_net
+
+  api:
+    build:
+      context: ./pharma-microservices-new
+      dockerfile: Dockerfile
+    container_name: pharma_api
+    ports:
+      - "3001:3001"
+    env_file:
+      - ./pharma-microservices-new/.env
+    depends_on:
+      - postgres
+      - rabbitmq
+    networks:
+      - pharma_net
+
+
+  subscriber:
+    build:
+      context: ./sub
+      dockerfile: Dockerfile
+    container_name: pharma_sub
+    ports:
+      - "8081:8081"
+    env_file:
+      - ./sub/.env
+    depends_on:
+      - rabbitmq
+    networks:
+      - pharma_net
+
+networks:
+  pharma_net:
+    driver: bridge
+
+volumes:
+  postgres_data:
